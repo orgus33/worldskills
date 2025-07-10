@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <title>Stories</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="px-3 py-4">
+
+
+<div class="people-container flex gap-4 mb-6"></div>
+
+<div class="flex flex-col gap-4">
+
+    <div class="flex items-center justify-center h-100 w-full bg-gray-200 rounded-lg">
+        Random <br> Content
+    </div>
+
+    <div class="flex items-center justify-center h-100 w-full bg-gray-200 rounded-lg">
+        Random <br> Content
+    </div>
+
+    <div class="flex items-center justify-center h-100 w-full bg-gray-200 rounded-lg">
+        Random <br> Content
+    </div>
+
+</div>
+
+
+<div class="story hidden absolute top-0 left-0 bottom-0 right-0 bg-gray-800 px-2 py-3 z-1">
+
+    <div class="prev w-25 h-full absolute top-0 left-0 cursor-pointer"></div>
+    <div class="next w-25 h-full absolute top-0 right-0 cursor-pointer"></div>
+
+    <div class="slides flex gap-4 mb-4">
+    </div>
+
+
+    <div class="flex items-center justify-between px-3">
+        <div class="flex gap-3 items-center">
+
+            <div class="flex gap-2 items-center">
+                <img class="avatar-story rounded-full aspect-square w-9 h-9" src="https://userstock.io/data/wp-content/uploads/2017/07/tatiana-nino-2963-300x300.jpg" alt="img">
+                <p class="username-story text-lg font-semibold text-gray-300">John Doe</p>
+            </div>
+
+            <p class="time-story text-md font-semibold text-gray-400">3m</p>
+        </div>
+
+        <p class="close-story text-3xl cursor-pointer text-gray-50 z-2">&times;</p>
+    </div>
+
+
+    <img class="story-img h-full w-full absolute top-0 bottom-0 left-0 right-0 object-cover z-[-1]" src="https://picsum.photos/id/300/500/900" alt="img">
+
+</div>
+
+
+<script src="script.js" defer type="module"></script>
+
+</body>
+</html>
