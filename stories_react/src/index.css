@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+.avatar::before, .avatar::after {
+  position: absolute;
+  content: "";
+  background-color: oklch(92.8% 0.006 264.531);
+  border-radius: 9999px;
+  z-index: -1;
+}
+
+.avatar:hover::before, .avatar:hover::after {
+  background-color: oklch(55.1% 0.027 264.364);
+}
+
+.avatar::before {
+  width: 10px;
+  height: 10px;
+  bottom: 1px;
+  left: 4px;
+}
+
+.avatar::after {
+  width: 5px;
+  height: 5px;
+  bottom: -3px;
+  left: 0;
+}
