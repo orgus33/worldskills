@@ -1,0 +1,698 @@
+openapi: 3.0.3
+info:
+  title: Concert Ticket Management API
+  description: A concert ticket management system.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@ticketapi.com
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: |
+        Register a new individual user account.
+        
+        **Validation Rules:**
+        - Email must be unique and valid format
+        - Password minimum 8 characters with uppercase, lowercase, number
+        - Phone must be valid format
+        - Age must be 13+
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - first_name
+                - last_name
+                - phone
+                - date_of_birth
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                first_name:
+                  type: string
+                  maxLength: 50
+                last_name:
+                  type: string
+                  maxLength: 50
+                phone:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                date_of_birth:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '422':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user and return bearer token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  /events:
+    get:
+      tags:
+        - Events
+      summary: List all events
+      description: |
+        Get paginated list of all concert events.
+        
+        **Query Parameters:**
+        - Filter by date range, city, category
+        - Sort by date, price, popularity
+        - Paginate results
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 15
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [date, price_asc, price_desc, name]
+            default: date
+      responses:
+        '200':
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+                  current_page:
+                    type: integer
+                  last_page:
+                    type: integer
+                  per_page:
+                    type: integer
+                  total:
+                    type: integer
+
+  /events/{id}:
+    get:
+      tags:
+        - Events
+      summary: Get event details
+      description: |
+        Get detailed information about a specific event including available ticket categories.
+        
+        **Returns:**
+        - Event details with venue information
+        - Available ticket categories with current availability
+        - Pricing information
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Event details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventDetails'
+        '404':
+          description: Event not found
+
+  /events/{id}/reserve:
+    post:
+      tags:
+        - Reservations
+      summary: Reserve tickets
+      description: |
+        Create a temporary reservation for tickets. Tickets are held for 5 minutes.
+        
+        **Validation Rules:**
+        - Event must exist and be active
+        - Event must not be sold out
+        - Sale period must be active (after sale_starts_at, before event_date)
+        - Requested quantity must be available
+        - User/company must meet age requirements for event
+        - Maximum 8 tickets per reservation
+        - Cannot have existing active reservation for same event
+        
+        **Business Logic:**
+        - Reduces available ticket count temporarily
+        - Creates reservation record with 5-minute expiry
+        - Calculates total price including fees
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category_id
+                - quantity
+                - purchaser_type
+              properties:
+                category_id:
+                  type: integer
+                  description: ID of the ticket category
+                quantity:
+                  type: integer
+                  minimum: 1
+                  maximum: 8
+                purchaser_type:
+                  type: string
+                  enum: [user, company]
+                  description: Type of purchaser (polymorphic)
+                company_id:
+                  type: integer
+                  description: Required if purchaser_type is company
+      responses:
+        '201':
+          description: Reservation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Business rule violation (sold out, outside sale period, etc.)
+        '422':
+          description: Validation errors
+
+  /reservations/{id}/confirm:
+    post:
+      tags:
+        - Reservations
+      summary: Confirm reservation
+      description: |
+        Confirm a reservation and create actual tickets. Must be done within 5 minutes.
+        
+        **Validation Rules:**
+        - Reservation must exist and belong to authenticated user
+        - Reservation must not be expired (5-minute window)
+        - Reservation must not be already confirmed
+        - Payment method must be valid
+        
+        **Business Logic:**
+        - Creates ticket records with polymorphic purchasable relationship
+        - Updates reservation status to confirmed
+        - Generates unique ticket codes
+        - Sends confirmation email (mention in response)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_method
+              properties:
+                payment_method:
+                  type: string
+                  enum: [credit_card, paypal, bank_transfer]
+                payment_details:
+                  type: object
+                  description: Payment method specific details
+      responses:
+        '200':
+          description: Reservation confirmed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tickets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ticket'
+                  total_amount:
+                    type: number
+                    format: float
+                  confirmation_email_sent:
+                    type: boolean
+        '400':
+          description: Reservation expired or invalid
+        '404':
+          description: Reservation not found
+
+  /reservations/{id}/cancel:
+    delete:
+      tags:
+        - Reservations
+      summary: Cancel reservation
+      description: |
+        Cancel an active reservation and release held tickets.
+        
+        **Validation Rules:**
+        - Reservation must exist and belong to authenticated user
+        - Reservation must not be expired or confirmed
+        
+        **Business Logic:**
+        - Releases held tickets back to available pool
+        - Marks reservation as cancelled
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reservation cancelled successfully
+        '400':
+          description: Cannot cancel reservation (expired or confirmed)
+        '404':
+          description: Reservation not found
+
+  /tickets:
+    get:
+      tags:
+        - Tickets
+      summary: Get user's tickets
+      description: |
+        Get all tickets owned by the authenticated user or their company.
+        
+        **Returns:**
+        - Personal tickets (purchasable_type = User)
+        - Company tickets if user is associated with companies
+        - Includes event details and ticket status
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, used, cancelled]
+        - name: event_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tickets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketWithEvent'
+
+  /tickets/{id}:
+    get:
+      tags:
+        - Tickets
+      summary: Get ticket details
+      description: |
+        Get detailed information about a specific ticket.
+        
+        **Validation Rules:**
+        - Ticket must belong to authenticated user or their company
+        - Include QR code for entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ticket details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDetails'
+        '403':
+          description: Not authorized to view this ticket
+        '404':
+          description: Ticket not found
+
+  /companies/{id}/tickets:
+    get:
+      tags:
+        - Companies
+      summary: Get company tickets
+      description: |
+        Get all tickets purchased by a specific company.
+        
+        **Validation Rules:**
+        - User must be associated with the company (employees table)
+        - Or user must be company admin
+        
+        **Returns:**
+        - All tickets with purchasable_type = Company and purchasable_id = company_id
+        - Includes purchase history and employee assignments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: assigned_to
+          in: query
+          schema:
+            type: integer
+          description: Filter by assigned employee ID
+      responses:
+        '200':
+          description: Company tickets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanyTicket'
+        '403':
+          description: Not authorized to view company tickets
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Random string token generated on login
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        venue_name:
+          type: string
+        venue_address:
+          type: string
+        city:
+          type: string
+        event_date:
+          type: string
+          format: date-time
+        doors_open:
+          type: string
+          format: date-time
+        sale_starts_at:
+          type: string
+          format: date-time
+        sale_ends_at:
+          type: string
+          format: date-time
+        min_age:
+          type: integer
+        max_capacity:
+          type: integer
+        tickets_sold:
+          type: integer
+        status:
+          type: string
+          enum: [active, cancelled, postponed, sold_out]
+        image_url:
+          type: string
+          format: uri
+
+    EventDetails:
+      allOf:
+        - $ref: '#/components/schemas/Event'
+        - type: object
+          properties:
+            categories:
+              type: array
+              items:
+                $ref: '#/components/schemas/TicketCategory'
+
+    TicketCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+        max_quantity:
+          type: integer
+        available_quantity:
+          type: integer
+        position:
+          type: integer
+
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+        event_id:
+          type: integer
+        category_id:
+          type: integer
+        quantity:
+          type: integer
+        total_price:
+          type: number
+          format: float
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, confirmed, cancelled, expired]
+        purchaser_type:
+          type: string
+          enum: [user, company]
+        purchaser_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: integer
+        event_id:
+          type: integer
+        category_id:
+          type: integer
+        purchasable_type:
+          type: string
+          enum: [User, Company]
+        purchasable_id:
+          type: integer
+        ticket_code:
+          type: string
+        price_paid:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [active, used, cancelled]
+        purchased_at:
+          type: string
+          format: date-time
+
+    TicketWithEvent:
+      allOf:
+        - $ref: '#/components/schemas/Ticket'
+        - type: object
+          properties:
+            event:
+              $ref: '#/components/schemas/Event'
+            category:
+              $ref: '#/components/schemas/TicketCategory'
+
+    TicketDetails:
+      allOf:
+        - $ref: '#/components/schemas/TicketWithEvent'
+        - type: object
+          properties:
+            qr_code:
+              type: string
+              description: Base64 encoded QR code for entry
+            purchaser:
+              oneOf:
+                - $ref: '#/components/schemas/User'
+                - $ref: '#/components/schemas/Company'
+
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: string
+        tax_id:
+          type: string
+
+    CompanyTicket:
+      allOf:
+        - $ref: '#/components/schemas/TicketWithEvent'
+        - type: object
+          properties:
+            assigned_to:
+              type: integer
+              description: Employee ID if ticket is assigned
+            assigned_employee:
+              $ref: '#/components/schemas/User'
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+tags:
+  - name: Authentication
+    description: User registration and login
+  - name: Events
+    description: Concert event management
+  - name: Reservations
+    description: Ticket reservation system
+  - name: Tickets
+    description: Ticket management
+  - name: Companies
+    description: Corporate ticket management
