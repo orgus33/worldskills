@@ -18,9 +18,12 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
         'email',
+        'firstname',
+        'lastname',
         'password',
+        'phone',
+        'date_of_birth'
     ];
 
     /**
@@ -45,4 +48,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+
+    public function companiesTicket()
+    {
+        return $this->belongsTo(CompanyTicket::class);
+    }
+
+
 }
