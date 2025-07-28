@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Nette\Utils\Random;
 
 class UserController extends Controller
@@ -41,9 +42,8 @@ class UserController extends Controller
 
     public function register(Request $request)
     {
-        $email = $request->get("email");
 
-        $request->validate([
+        Validator::make($request->all(), [
             "email" => "email|required",
             "password" => "required|min:8",
             "phone" => "required",
@@ -54,9 +54,11 @@ class UserController extends Controller
                 "date",
                 "before_or_equal:" . now()->subYears(13)->format('Y-m-d')
             ]
-        ]);
+        ])->validate();
 
-        $user = User::where("email", $email)->get();
+        $email = $request->get("email");
+
+        $user = User::where("email", $email)->first();
 
         if ($user) {
             return response()->json(["message" => "email already used"]);
