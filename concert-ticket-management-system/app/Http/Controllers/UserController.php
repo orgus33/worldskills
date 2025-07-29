@@ -18,34 +18,34 @@ class UserController extends Controller
         $token = $request->bearerToken();
         $user = User::where('token', $token)->first();
 
-        if ($user) {
-            return response()->json(["token" => $token]);
-        }
-
-        $validator = Validator::make($request->all(), [
-            "email" => "required",
-            "password" => "required"
-        ]);
-
-        $email = $validator->getValue("email");
-        $password = $validator->getValue("password");
-
-        $user = User::where("email", $email)->first();
-
         if (!$user) {
-            return response()->json(["message" => "invalid credentials"]);
+            $validator = Validator::make($request->all(), [
+                "email" => "required",
+                "password" => "required"
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(["message" => "Error validation", "error" => $validator->errors()], 401);
+            }
+
+            $email = $validator->getValue("email");
+            $password = $validator->getValue("password");
+
+            $user = User::where("email", $email)->first();
+
+            if (!$user || !Hash::check($password, $user->password)) {
+                return response()->json(["message" => "invalid credentials"], 401);
+            }
+
+            $newToken = Str::random(60);
+
+            $user->token = $newToken;
+            $user->save();
         }
 
-        if (!Hash::check($password, $user->password)) {
-            return response()->json(["message" => "Password and token invalid"]);
-        }
 
-        $newToken = Str::random(60);
+        return response()->json(["user" => $user->makeHidden("token"), "token" => $user->token]);
 
-        $user->token = $newToken;
-        $user->save();
-
-        return response()->json(["token" => $newToken]);
 
     }
 
@@ -65,7 +65,7 @@ class UserController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(["error" => $validator->errors()]);
+            return response()->json(["message" => "Validation error" ,"error" => $validator->errors()], 422);
         }
 
 
@@ -87,7 +87,7 @@ class UserController extends Controller
         $user->token = $newToken;
         $user->save();
 
-        return response()->json(["token" => $newToken]);
+        return response()->json(["user" => $user->makeHidden("token"), "token" => $user->token], 201);
 
     }
 }
