@@ -15,33 +15,28 @@ class UserController extends Controller
     public function login(Request $request)
     {
 
-        $token = $request->bearerToken();
-        $user = User::where('token', $token)->first();
+        $validator = Validator::make($request->all(), [
+            "email" => "required",
+            "password" => "required"
+        ]);
 
-        if (!$user) {
-            $validator = Validator::make($request->all(), [
-                "email" => "required",
-                "password" => "required"
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json(["message" => "Error validation", "error" => $validator->errors()], 401);
-            }
-
-            $email = $validator->getValue("email");
-            $password = $validator->getValue("password");
-
-            $user = User::where("email", $email)->first();
-
-            if (!$user || !Hash::check($password, $user->password)) {
-                return response()->json(["message" => "invalid credentials"], 401);
-            }
-
-            $newToken = Str::random(60);
-
-            $user->token = $newToken;
-            $user->save();
+        if ($validator->fails()) {
+            return response()->json(["message" => "Error validation", "error" => $validator->errors()], 401);
         }
+
+        $email = $validator->getValue("email");
+        $password = $validator->getValue("password");
+
+        $user = User::where("email", $email)->first();
+
+        if (!$user || !Hash::check($password, $user->password)) {
+            return response()->json(["message" => "invalid credentials"], 401);
+        }
+
+        $newToken = Str::random(64);
+
+        $user->personalAccessToken->token = $newToken;
+        $user->personalAccessToken->save();
 
 
         return response()->json(["user" => $user->makeHidden("token"), "token" => $user->token]);
@@ -65,7 +60,7 @@ class UserController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(["message" => "Validation error" ,"error" => $validator->errors()], 422);
+            return response()->json(["message" => "Validation error", "error" => $validator->errors()], 422);
         }
 
 
@@ -82,12 +77,12 @@ class UserController extends Controller
 
         $user = User::create($data);
 
-        $newToken = Str::random(60);
+        $newToken = Str::random(64);
 
-        $user->token = $newToken;
-        $user->save();
+        $user->personalAccessToken()->updateOrCreate([], ['token' => $newToken]);
+        $user->personalAccessToken->save();
 
-        return response()->json(["user" => $user->makeHidden("token"), "token" => $user->token], 201);
+        return response()->json(["user" => $user->except("personal_access_token"), "token" => $user->personalAccessToken->token], 201);
 
     }
 }

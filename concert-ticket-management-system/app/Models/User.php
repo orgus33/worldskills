@@ -33,7 +33,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'remember_token',
+        'personal_access_token'
     ];
 
     /**
@@ -49,11 +49,8 @@ class User extends Authenticatable
         ];
     }
 
-
-    public function companiesTicket()
-    {
-        return $this->belongsTo(CompanyTicket::class);
+    public function personalAccessToken() {
+        return $this->hasOne(PersonalAccessToken::class);
     }
-
 
 }

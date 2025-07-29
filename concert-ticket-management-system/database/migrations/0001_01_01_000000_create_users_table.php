@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('password');
             $table->string('phone');
             $table->string('date_of_birth');
-            $table->string('token')->nullable();
             $table->timestamps();
         });
 

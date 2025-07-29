@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tickets', function (Blueprint $table) {
-            $table->integer('event_id');
-            $table->integer('category_id');
+            $table->foreignIdFor(\App\Models\Event::class)->constrained();
+            $table->foreignId("category_id")->constrained("ticket_categories");
             $table->enum('purchasable_type', ['User', 'Company']);
             $table->integer('purchasable_id');
             $table->string('ticket_code');
