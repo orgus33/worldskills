@@ -27,6 +27,7 @@ return new class extends Migration
             $table->integer("tickets_sold");
             $table->enum('status', ['active', 'cancelled', 'postponed', 'sold_out']);
             $table->string('image_url');
+            $table->foreignIdFor(\App\Models\TicketCategory::class)->constrained()->cascadeOnDelete();
             $table->timestamps();
         });
     }

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('reservations', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(\App\Models\Event::class);
-            $table->foreignId("category")->constrained("ticket_categories")->cascadeOnDelete();
+            $table->foreignIdFor(\App\Models\TicketCategory::class)->constrained()->cascadeOnDelete();
             $table->integer("quantity");
             $table->string("expires_at");
             $table->enum("status", ["active", "confirmed", "cancelled", "expired"]);

@@ -13,23 +13,26 @@ Route::get('/test', function (Request $request) {
 });
 
 
-
 // Auth
 Route::post('/auth/register', [UserController::class, 'register']);
 Route::post('/auth/login', [UserController::class, 'login']);
 
-// Events
-Route::get('/events', [EventController::class, 'index']);
-Route::get('/events/{id}', [EventController::class, 'show']);
-Route::post('/events/{id}/reserve', [ReservationController::class, 'store']);
 
-// Reservations
-Route::post('/reservations/{id}/confirm', [ReservationController::class, 'confirm']);
-Route::delete('/reservations/{id}/cancel', [ReservationController::class, 'cancel']);
+Route::middleware(\App\Http\Middleware\CheckBearerToken::class)->group(function () {
+    // Events
+    Route::get('/events', [EventController::class, 'index']);
+    Route::get('/events/{id}', [EventController::class, 'show']);
+    Route::post('/events/{id}/reserve', [ReservationController::class, 'store']);
 
-// Tickets
-Route::get('/tickets', [TicketController::class, 'index']);
-Route::get('/tickets/{id}', [TicketController::class, 'show']);
+    // Reservations
+    Route::post('/reservations/{id}/confirm', [ReservationController::class, 'confirm']);
+    Route::delete('/reservations/{id}/cancel', [ReservationController::class, 'cancel']);
 
-// Company Ticket
-Route::get('/companies/{id}/tickets', [CompanyTicketController::class, 'index']);
+    // Tickets
+    Route::get('/tickets', [TicketController::class, 'index']);
+    Route::get('/tickets/{id}', [TicketController::class, 'show']);
+
+    // Company Ticket
+    Route::get('/companies/{id}/tickets', [\App\Http\Controllers\CompanyController::class, 'index']);
+});
+

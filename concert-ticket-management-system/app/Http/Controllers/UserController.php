@@ -83,6 +83,5 @@ class UserController extends Controller
         $user->personalAccessToken->save();
 
         return response()->json(["user" => $user->except("personal_access_token"), "token" => $user->personalAccessToken->token], 201);
-
     }
 }
