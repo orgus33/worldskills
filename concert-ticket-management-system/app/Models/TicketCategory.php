@@ -12,7 +12,7 @@ class TicketCategory extends Model
         'price',
         'max_quantity',
         'available_quantity',
-        'position'
+        'position',
     ];
 
     public function reservations() {

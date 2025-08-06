@@ -21,12 +21,16 @@ class TicketController extends Controller
     {
         $user = $request->attributes->get('user');
 
-        $tickets = Ticket::find($id);
+        $ticket = Ticket::find($id);
 
-        if ($tickets->purchasable_id != $user->id) {
+        if (!$ticket) {
+            return response()->json(["message" => "Ticket not found"], 404);
+        }
+
+        if ($ticket->purchasable_id != $user->id) {
             return response()->json(["message" => "Not authorized to view this ticket"], 403);
         }
 
-        return response()->json($tickets);
+        return response()->json($ticket);
     }
 }

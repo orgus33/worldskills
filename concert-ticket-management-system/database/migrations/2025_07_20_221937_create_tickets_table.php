@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tickets', function (Blueprint $table) {
+            $table->id();
             $table->foreignIdFor(\App\Models\Event::class)->constrained();
             $table->foreignId("category_id")->constrained("ticket_categories");
             $table->enum('purchasable_type', ['User', 'Company']);
@@ -19,6 +20,7 @@ return new class extends Migration
             $table->string('ticket_code');
             $table->float('price_paid');
             $table->enum('status', ['active', 'used', 'cancelled']);
+            $table->string('qr_code');
             $table->timestamp('purchased_at');
             $table->timestamps();
         });

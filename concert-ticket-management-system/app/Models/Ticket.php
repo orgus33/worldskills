@@ -14,7 +14,8 @@ class Ticket extends Model
         'ticket_code',
         'price_paid',
         'status',
-        'purchased_at'
+        'purchased_at',
+        'qr_code'
     ];
 
     public function event() {
